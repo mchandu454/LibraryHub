@@ -118,6 +118,8 @@ function App() {
         try {
           const res = await axios.get('/api/members/me', { withCredentials: true });
           setUser(res.data.user);
+          localStorage.setItem('token', res.data.token);
+          window.dispatchEvent(new Event('storage'));
         } catch (err) {
           setUser(null);
           setIsAuthenticated(false);
