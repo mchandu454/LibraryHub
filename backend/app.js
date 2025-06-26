@@ -49,17 +49,7 @@ app.get("/", (req, res) => {
   res.send("LibraryHub API is running 🚀");
 });
 
-// TEMPORARY: Run seeders from a web request
-app.get('/run-seed', async (req, res) => {
-  const { exec } = require('child_process');
-  exec('node ./node_modules/sequelize-cli/lib/sequelize db:seed:all', (error, stdout, stderr) => {
-    if (error) {
-      res.status(500).send(stderr);
-    } else {
-      res.send(stdout);
-    }
-  });
-});
+
 
 // ✅ Local server start
 if (require.main === module) {
