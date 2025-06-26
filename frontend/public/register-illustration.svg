@@ -1,0 +1,90 @@
+<svg width="384" height="384" viewBox="0 0 384 384" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background elements -->
+  <circle cx="192" cy="192" r="180" fill="url(#gradient1)" opacity="0.1"/>
+  
+  <!-- Main character -->
+  <g transform="translate(192, 140)">
+    <!-- Head -->
+    <circle cx="0" cy="0" r="25" fill="#ffd93d"/>
+    <circle cx="-8" cy="-6" r="4" fill="#333"/>
+    <circle cx="8" cy="-6" r="4" fill="#333"/>
+    <path d="M -6 6 Q 0 12 6 6" stroke="#333" stroke-width="2" fill="none"/>
+    
+    <!-- Hair -->
+    <path d="M -25 -15 Q -15 -25 0 -25 Q 15 -25 25 -15" stroke="#8B4513" stroke-width="8" fill="none" stroke-linecap="round"/>
+    
+    <!-- Body -->
+    <rect x="-20" y="25" width="40" height="50" rx="20" fill="#4facfe"/>
+    
+    <!-- Arms -->
+    <ellipse cx="-35" cy="45" rx="10" ry="20" fill="#4facfe"/>
+    <ellipse cx="35" cy="45" rx="10" ry="20" fill="#4facfe"/>
+    
+    <!-- Hands -->
+    <circle cx="-40" cy="65" r="8" fill="#ffd93d"/>
+    <circle cx="40" cy="65" r="8" fill="#ffd93d"/>
+    
+    <!-- Legs -->
+    <rect x="-15" y="75" width="10" height="30" rx="5" fill="#4facfe"/>
+    <rect x="5" y="75" width="10" height="30" rx="5" fill="#4facfe"/>
+    
+    <!-- Feet -->
+    <ellipse cx="-10" cy="105" rx="8" ry="4" fill="#333"/>
+    <ellipse cx="10" cy="105" rx="8" ry="4" fill="#333"/>
+  </g>
+  
+  <!-- Registration form elements -->
+  <g transform="translate(100, 200)">
+    <!-- Form background -->
+    <rect x="0" y="0" width="184" height="120" rx="12" fill="white" stroke="#667eea" stroke-width="2"/>
+    
+    <!-- Form fields -->
+    <rect x="12" y="12" width="160" height="20" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <rect x="12" y="40" width="160" height="20" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <rect x="12" y="68" width="160" height="20" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    
+    <!-- Labels -->
+    <text x="16" y="26" font-family="Arial" font-size="10" fill="#64748b">Name</text>
+    <text x="16" y="54" font-family="Arial" font-size="10" fill="#64748b">Email</text>
+    <text x="16" y="82" font-family="Arial" font-size="10" fill="#64748b">Password</text>
+    
+    <!-- Submit button -->
+    <rect x="12" y="96" width="160" height="20" rx="10" fill="#667eea"/>
+    <text x="92" y="109" font-family="Arial" font-size="10" fill="white" text-anchor="middle">Register</text>
+  </g>
+  
+  <!-- Floating elements -->
+  <g opacity="0.7">
+    <!-- Books -->
+    <rect x="50" y="80" width="30" height="40" rx="3" fill="#667eea"/>
+    <rect x="54" y="84" width="22" height="32" rx="1" fill="white"/>
+    <line x1="58" y1="92" x2="72" y2="92" stroke="#667eea" stroke-width="1"/>
+    <line x1="58" y1="100" x2="70" y2="100" stroke="#667eea" stroke-width="1"/>
+    
+    <rect x="300" y="120" width="25" height="35" rx="3" fill="#764ba2"/>
+    <rect x="303" y="123" width="19" height="29" rx="1" fill="white"/>
+    <line x1="306" y1="130" x2="319" y2="130" stroke="#764ba2" stroke-width="1"/>
+    <line x1="306" y1="137" x2="317" y2="137" stroke="#764ba2" stroke-width="1"/>
+    
+    <!-- Stars -->
+    <path d="M 80 60 L 82 64 L 86 64 L 83 67 L 84 71 L 80 69 L 76 71 L 77 67 L 74 64 L 78 64 Z" fill="#ffd93d"/>
+    <path d="M 320 80 L 322 84 L 326 84 L 323 87 L 324 91 L 320 89 L 316 91 L 317 87 L 314 84 L 318 84 Z" fill="#ffd93d"/>
+    <path d="M 280 280 L 282 284 L 286 284 L 283 287 L 284 291 L 280 289 L 276 291 L 277 287 L 274 284 L 278 284 Z" fill="#ffd93d"/>
+    
+    <!-- Dots -->
+    <circle cx="100" cy="40" r="3" fill="#667eea"/>
+    <circle cx="320" cy="200" r="2" fill="#764ba2"/>
+    <circle cx="80" cy="300" r="2" fill="#f093fb"/>
+  </g>
+  
+  <!-- Welcome text -->
+  <text x="192" y="350" font-family="Arial" font-size="16" fill="#667eea" text-anchor="middle" font-weight="bold">Join LibraryHub</text>
+  
+  <!-- Gradients -->
+  <defs>
+    <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffd93d;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4facfe;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg> 

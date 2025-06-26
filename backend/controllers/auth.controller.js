@@ -75,9 +75,9 @@ const login = async (req, res) => {
     res
       .cookie("token", token, {
         httpOnly: true,
-        secure: false, // true only in production with HTTPS
+        secure: process.env.NODE_ENV === 'production', // true only in production with HTTPS
         sameSite: "Lax", // prevents cross-site issues
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       })
       .status(200)
       .json({
@@ -96,4 +96,20 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { register, login };
+const logout = async (req, res) => {
+  try {
+    res
+      .clearCookie("token", {
+        httpOnly: true,
+        secure: false,
+        sameSite: "Lax",
+      })
+      .status(200)
+      .json({ message: "Logout successful" });
+  } catch (error) {
+    console.error("❌ LOGOUT ERROR:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+module.exports = { register, login, logout };

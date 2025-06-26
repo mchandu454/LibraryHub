@@ -5,8 +5,8 @@ module.exports = (sequelize, DataTypes) => {
   class Borrowing extends Model {
     static associate(models) {
       Borrowing.belongsTo(models.User, { foreignKey: "userId" });
-      Borrowing.belongsTo(models.Book, { foreignKey: "bookId" });
-      
+      Borrowing.belongsTo(models.Book, { foreignKey: "bookId", as: "book" });
+      Borrowing.hasOne(models.Progress, { foreignKey: "borrowingId" });
     }
   }
 

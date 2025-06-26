@@ -3,6 +3,11 @@ const bcrypt = require("bcryptjs");
 
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
+    static associate(models) {
+      // ✅ This allows User.hasMany(Borrowing)
+      User.hasMany(models.Borrowing, { foreignKey: "userId" });
+    }
+
     validPassword(password) {
       return bcrypt.compareSync(password, this.password);
     }

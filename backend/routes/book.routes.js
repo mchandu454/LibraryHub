@@ -7,7 +7,10 @@ const {
   getBookById,
   updateBook,
   deleteBook,
-  getTrendingBooks
+  getTrendingBooks,
+  rateBook,
+  getBookRatings,
+  importGoogleBook
 } = require("../controllers/book.controller");
 
 // Public routes
@@ -19,5 +22,8 @@ router.get("/:id", getBookById);
 router.post("/", verifyToken, addBook);
 router.put("/:id", verifyToken, updateBook);
 router.delete("/:id", verifyToken, deleteBook);
+router.post('/:id/rate', verifyToken, rateBook);
+router.get('/:id/ratings', getBookRatings);
+router.post('/import-google', verifyToken, importGoogleBook);
 
 module.exports = router;

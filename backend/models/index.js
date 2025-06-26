@@ -23,6 +23,8 @@ fs.readdirSync(__dirname)
     db[model.name] = model;
   });
 
+const Rating = require('./ratings')(sequelize, Sequelize.DataTypes);
+
 Object.keys(db).forEach((modelName) => {
   if (db[modelName].associate) {
     db[modelName].associate(db);
@@ -31,5 +33,7 @@ Object.keys(db).forEach((modelName) => {
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
+db.Rating = Rating;
+db.Progress = require("./progress")(sequelize, Sequelize.DataTypes);
 
 module.exports = db;

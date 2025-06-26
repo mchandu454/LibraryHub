@@ -8,6 +8,7 @@ const memberRoutes = require("./routes/member.routes");
 const bookRoutes = require("./routes/book.routes");
 const borrowRoutes = require("./routes/borrow.routes");
 const adminRoutes = require("./routes/admin.routes");
+const progressRoutes = require("./routes/progress.routes");
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ app.use("/api/members", memberRoutes);
 app.use("/api/books", bookRoutes);
 app.use("/api/borrowings", borrowRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/progress", progressRoutes);
 
 app.get("/", (req, res) => {
   res.send("LibraryHub API is running 🚀");

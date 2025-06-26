@@ -39,6 +39,8 @@ module.exports = {
         type: Sequelize.DATE,
       },
     });
+    await queryInterface.addIndex('books', ['genre']);
+    await queryInterface.addIndex('books', ['author']);
   },
 
   async down(queryInterface, Sequelize) {

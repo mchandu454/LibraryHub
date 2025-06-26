@@ -2,220 +2,481 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { Link, useNavigate } from 'react-router-dom';
+
+// Helper to format dates
+function formatDate(date) {
+  if (!date) return '';
+  const d = new Date(date);
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
 
 function Dashboard() {
   const [user, setUser] = useState(null);
-  const [history, setHistory] = useState([]);
+  const [borrowings, setBorrowings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [returning, setReturning] = useState({}); // { [borrowingId]: boolean }
   const [userLoading, setUserLoading] = useState(true);
+  const [avgProgress, setAvgProgress] = useState(0);
+  // Progress update states
+  const [updatingProgress, setUpdatingProgress] = useState({}); // { [borrowingId]: boolean }
+  const [progressForms, setProgressForms] = useState({}); // { [borrowingId]: { show: boolean, value: number } }
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchUserData = async () => {
       setUserLoading(true);
       try {
-        const res = await axios.get('/api/auth/me', { withCredentials: true });
-        setUser(res.data.user);
-      } catch {
-        setUser(null);
+        const [userRes, borrowingsRes] = await Promise.all([
+          axios.get('/api/members/me', { withCredentials: true }),
+          axios.get('/api/borrowings/history', { withCredentials: true })
+        ]);
+        
+        setUser(userRes.data.user);
+        setBorrowings(borrowingsRes.data.borrowings || []);
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+        setError('Failed to load user data.');
       } finally {
+        setLoading(false);
         setUserLoading(false);
       }
     };
-    fetchUser();
+
+    fetchUserData();
   }, []);
 
+  // Calculate average progress
   useEffect(() => {
-    const fetchHistory = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await axios.get('/api/borrow/history', { withCredentials: true });
-        setHistory(res.data.history);
-      } catch (err) {
-        setError('Failed to load borrow history.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchHistory();
-  }, []);
+    if (borrowings.length === 0) {
+      setAvgProgress(0);
+    } else {
+      const total = borrowings.reduce((sum, b) => sum + (b.progress || 0), 0);
+      setAvgProgress(Math.round(total / borrowings.length));
+    }
+  }, [borrowings]);
 
   const handleReturn = async (borrowingId) => {
-    setReturning(r => ({ ...r, [borrowingId]: true }));
+    setReturning(prev => ({ ...prev, [borrowingId]: true }));
     try {
-      await axios.put(`/api/borrow/${borrowingId}/return`, {}, { withCredentials: true });
+      await axios.put(`/api/borrowings/${borrowingId}/return`, {}, { withCredentials: true });
       toast.success('Book returned successfully!');
-      // Refresh history
-      const res = await axios.get('/api/borrow/history', { withCredentials: true });
-      setHistory(res.data.history);
+      // Refresh borrowings
+      const res = await axios.get('/api/borrowings/history', { withCredentials: true });
+      setBorrowings(res.data.borrowings || []);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to return book.');
     } finally {
-      setReturning(r => ({ ...r, [borrowingId]: false }));
+      setReturning(prev => ({ ...prev, [borrowingId]: false }));
     }
   };
 
-  // Helper to determine status
-  const getStatus = (borrowing) => {
-    if (borrowing.returnedAt) return 'Returned';
-    // Overdue if borrowedAt > 14 days ago (mock logic)
-    const borrowedDate = new Date(borrowing.borrowedAt);
-    const now = new Date();
-    const diffDays = (now - borrowedDate) / (1000 * 60 * 60 * 24);
-    if (diffDays > 14) return 'Overdue';
-    return 'Active';
+  // Handle progress update
+  const handleProgressUpdate = async (borrowingId, newProgress) => {
+    if (newProgress < 0 || newProgress > 100) {
+      toast.error('Progress must be between 0 and 100.');
+      return;
+    }
+
+    setUpdatingProgress(prev => ({ ...prev, [borrowingId]: true }));
+    try {
+      await axios.post('/api/progress', {
+        borrowingId,
+        progress: newProgress
+      }, { withCredentials: true });
+      
+      // Update local state
+      setBorrowings(prev => prev.map(b => 
+        b.id === borrowingId ? { ...b, progress: newProgress } : b
+      ));
+      
+      // Hide progress form
+      setProgressForms(prev => ({ ...prev, [borrowingId]: { show: false, value: 0 } }));
+      toast.success(`Progress updated to ${newProgress}%!`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update progress.');
+    } finally {
+      setUpdatingProgress(prev => ({ ...prev, [borrowingId]: false }));
+    }
   };
 
-  // Mock analytics: progress and last read
-  const getProgress = (borrowing) => Math.floor(Math.random() * 100); // 0-99%
-  const getLastRead = (borrowing) => {
-    const daysAgo = Math.floor(Math.random() * 10);
-    const date = new Date();
-    date.setDate(date.getDate() - daysAgo);
-    return date.toLocaleDateString();
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'borrowed':
+        return 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white';
+      case 'returned':
+        return 'bg-gradient-to-r from-green-500 to-emerald-500 text-white';
+      case 'overdue':
+        return 'bg-gradient-to-r from-red-500 to-pink-500 text-white';
+      default:
+        return 'bg-gradient-to-r from-gray-500 to-gray-600 text-white';
+    }
   };
 
-  const currentBorrowings = history.filter(b => !b.returnedAt);
-  const overdueCount = history.filter(b => getStatus(b) === 'Overdue').length;
-  const returnedCount = history.filter(b => getStatus(b) === 'Returned').length;
-  const activeCount = history.filter(b => getStatus(b) === 'Active').length;
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'borrowed':
+        return '📖 Currently Borrowed';
+      case 'returned':
+        return '✅ Returned';
+      case 'overdue':
+        return '⚠️ Overdue';
+      default:
+        return '❓ Unknown';
+    }
+  };
 
-  return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-2xl font-bold mb-2">My Library</h1>
-      {userLoading ? (
-        <div className="text-gray-500 mb-4">Loading user info...</div>
-      ) : user ? (
-        <div className="mb-6 text-lg">Welcome, <span className="font-semibold">{user.name}</span>!</div>
-      ) : null}
-      {/* Summary Card */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-blue-100 dark:bg-blue-900 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold">{activeCount}</div>
-          <div className="text-sm text-blue-800 dark:text-blue-200">Active</div>
-        </div>
-        <div className="bg-yellow-100 dark:bg-yellow-900 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold">{overdueCount}</div>
-          <div className="text-sm text-yellow-800 dark:text-yellow-200">Overdue</div>
-        </div>
-        <div className="bg-green-100 dark:bg-green-900 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold">{returnedCount}</div>
-          <div className="text-sm text-green-800 dark:text-green-200">Returned</div>
-        </div>
-      </div>
-      {loading ? (
-        <div className="text-center text-gray-500">Loading...</div>
-      ) : error ? (
-        <div className="text-center text-red-500">{error}</div>
-      ) : (
-        <>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary-light via-glass to-accent-teal pb-20 animate-fadeIn">
+        <div className="max-w-6xl mx-auto px-4 pt-12 flex flex-col gap-10">
+          {/* Analytics Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+            <div className="glass rounded-2xl shadow-glow p-6 flex flex-col items-center animate-pop">
+              <span className="text-3xl text-accent-gold mb-2">📚</span>
+              <div className="text-lg font-semibold text-primary-dark">Books Borrowed</div>
+              <div className="text-3xl font-extrabold text-primary-dark mt-1">{borrowings.length}</div>
+            </div>
+            <div className="glass rounded-2xl shadow-glow p-6 flex flex-col items-center animate-pop">
+              <span className="text-3xl text-accent-teal mb-2">⏳</span>
+              <div className="text-lg font-semibold text-primary-dark">Currently Borrowed</div>
+              <div className="text-3xl font-extrabold text-primary-dark mt-1">{borrowings.length}</div>
+            </div>
+            <div className="glass rounded-2xl shadow-glow p-6 flex flex-col items-center animate-pop">
+              <span className="text-3xl text-accent-gold mb-2">📈</span>
+              <div className="text-lg font-semibold text-primary-dark">Avg. Progress</div>
+              <div className="text-3xl font-extrabold text-primary-dark mt-1">{avgProgress}%</div>
+            </div>
+          </div>
           {/* Current Borrowings */}
-          <div className="mb-10">
-            <h2 className="text-xl font-semibold mb-4">Current Borrowings</h2>
-            {currentBorrowings.length === 0 ? (
-              <div className="text-gray-500">No active borrowings. Go borrow a book from the Home page!</div>
+          <section>
+            <h2 className="text-2xl font-bold text-primary-dark mb-4 flex items-center gap-2">
+              <span className="text-accent-teal">📖</span> Current Borrowings
+            </h2>
+            {borrowings.length === 0 ? (
+              <div className="text-gray-500">No active borrowings.</div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {currentBorrowings.map(borrowing => (
-                  <div key={borrowing.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex flex-col gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+                {borrowings.map(borrowing => (
+                  <div key={borrowing.id} className="glass rounded-2xl shadow-card p-5 flex flex-col gap-3 animate-pop">
                     <div className="flex items-center gap-4">
-                      <div className="w-16 h-24 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center overflow-hidden">
-                        {borrowing.Book?.image ? (
-                          <img src={borrowing.Book.image} alt={borrowing.Book.title} className="w-full h-full object-cover rounded" />
+                      <div className="w-16 h-24 rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                        {borrowing.book?.image ? (
+                          <img src={borrowing.book.image} alt={borrowing.book.title} className="w-full h-full object-cover" />
                         ) : (
-                          <span className="text-gray-400">No Cover</span>
+                          <span className="text-gray-400 text-lg">No Cover</span>
                         )}
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{borrowing.Book?.title}</h3>
-                        <p className="text-gray-600 dark:text-gray-300">{borrowing.Book?.author}</p>
-                        <div className="text-sm text-gray-500">Borrowed: {new Date(borrowing.borrowedAt).toLocaleDateString()}</div>
-                        <div className="mt-2">
-                          <button
-                            className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 disabled:opacity-60"
-                            onClick={() => handleReturn(borrowing.id)}
-                            disabled={returning[borrowing.id]}
-                          >
-                            {returning[borrowing.id] ? 'Returning...' : 'Return Book'}
-                          </button>
-                        </div>
+                      <div className="flex-1 flex flex-col">
+                        <h3 className="font-bold text-lg text-gray-800 dark:text-white mb-1 line-clamp-2">{borrowing.book?.title}</h3>
+                        <p className="text-gray-600 dark:text-gray-300 text-xs mb-1 line-clamp-1">by {borrowing.book?.author}</p>
+                        <span className="inline-block px-2 py-1 text-xs bg-gradient-primary text-white rounded-full font-medium w-fit mb-1">{borrowing.book?.genre}</span>
                       </div>
                     </div>
-                    {/* Analytics */}
+                    {/* Progress Bar */}
                     <div className="mt-2">
-                      <div className="text-sm text-gray-500 mb-1">Reading Progress</div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded h-3 mb-1">
-                        <div
-                          className="bg-blue-500 h-3 rounded"
-                          style={{ width: `${getProgress(borrowing)}%` }}
-                        ></div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-gray-500">Progress</span>
+                        <span className="text-xs text-primary-dark font-bold">{borrowing.progress || 0}%</span>
                       </div>
-                      <div className="text-xs text-gray-400">Last read: {getLastRead(borrowing)}</div>
+                      <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div className="h-full bg-accent-teal transition-all duration-500" style={{ width: `${borrowing.progress || 0}%` }}></div>
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">Last read: {borrowing.lastReadAt ? formatDate(borrowing.lastReadAt) : 'N/A'}</div>
+                      
+                      {/* Progress Update Form */}
+                      {progressForms[borrowing.id]?.show ? (
+                        <div className="mt-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={progressForms[borrowing.id].value}
+                              onChange={(e) => setProgressForms(prev => ({
+                                ...prev,
+                                [borrowing.id]: { ...prev[borrowing.id], value: parseInt(e.target.value) }
+                              }))}
+                              className="flex-1"
+                            />
+                            <span className="text-xs font-bold text-primary-dark min-w-[2.5rem]">
+                              {progressForms[borrowing.id].value}%
+                            </span>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleProgressUpdate(borrowing.id, progressForms[borrowing.id].value)}
+                              disabled={updatingProgress[borrowing.id]}
+                              className="flex-1 btn-accent py-1 rounded-lg text-xs font-semibold"
+                            >
+                              {updatingProgress[borrowing.id] ? 'Updating...' : 'Update'}
+                            </button>
+                            <button
+                              onClick={() => setProgressForms(prev => ({ ...prev, [borrowing.id]: { show: false, value: 0 } }))}
+                              className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setProgressForms(prev => ({ 
+                            ...prev, 
+                            [borrowing.id]: { show: true, value: borrowing.progress || 0 } 
+                          }))}
+                          className="w-full mt-2 btn-accent py-1 rounded-lg text-xs font-semibold"
+                        >
+                          📊 Update Progress
+                        </button>
+                      )}
                     </div>
+                    {borrowing.status === 'borrowed' && (
+                      <button
+                        type="button"
+                        aria-label="Return this book"
+                        tabIndex={0}
+                        className="btn-success px-4 py-2 rounded-xl font-semibold shadow-glow hover-lift transition-all duration-200"
+                        onClick={() => {
+                          console.log('Return clicked', borrowing.id);
+                          handleReturn(borrowing.id);
+                        }}
+                        disabled={returning[borrowing.id]}
+                      >
+                        {returning[borrowing.id] ? 'Returning...' : 'Return'}
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
             )}
-          </div>
-
-          {/* Borrow History */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Borrow History</h2>
-            {history.length === 0 ? (
-              <div className="text-gray-500">No borrow history. Start borrowing books to see your history here!</div>
+          </section>
+          {/* Borrow History Timeline */}
+          <section>
+            <h2 className="text-2xl font-bold text-primary-dark mb-4 flex items-center gap-2">
+              <span className="text-accent-gold">🕑</span> Borrow History
+            </h2>
+            {borrowings.length === 0 ? (
+              <div className="text-gray-500">No borrow history yet.</div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg shadow">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-2 text-left">Book</th>
-                      <th className="px-4 py-2 text-left">Borrowed At</th>
-                      <th className="px-4 py-2 text-left">Returned At</th>
-                      <th className="px-4 py-2 text-left">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {history.map(borrowing => (
-                      <tr key={borrowing.id} className="border-t border-gray-200 dark:border-gray-700">
-                        <td className="px-4 py-2">
-                          <div className="flex items-center gap-2">
-                            <div className="w-10 h-14 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center overflow-hidden">
-                              {borrowing.Book?.image ? (
-                                <img src={borrowing.Book.image} alt={borrowing.Book.title} className="w-full h-full object-cover rounded" />
-                              ) : (
-                                <span className="text-gray-400">No Cover</span>
-                              )}
-                            </div>
-                            <div>
-                              <div className="font-semibold">{borrowing.Book?.title}</div>
-                              <div className="text-xs text-gray-500">{borrowing.Book?.author}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2">{new Date(borrowing.borrowedAt).toLocaleDateString()}</td>
-                        <td className="px-4 py-2">{borrowing.returnedAt ? new Date(borrowing.returnedAt).toLocaleDateString() : '-'}</td>
-                        <td className="px-4 py-2">
-                          <span className={
-                            getStatus(borrowing) === 'Returned'
-                              ? 'bg-green-100 text-green-700 px-2 py-1 rounded text-xs'
-                              : getStatus(borrowing) === 'Overdue'
-                              ? 'bg-red-100 text-red-700 px-2 py-1 rounded text-xs'
-                              : 'bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs'
-                          }>
-                            {getStatus(borrowing)}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="space-y-6">
+                {borrowings.map(borrowing => (
+                  <div key={borrowing.id} className="glass rounded-xl shadow-card p-4 flex flex-col sm:flex-row items-center gap-4 animate-fadeIn">
+                    <div className="w-14 h-20 rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                      {borrowing.book?.image ? (
+                        <img src={borrowing.book.image} alt={borrowing.book.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-gray-400 text-lg">No Cover</span>
+                      )}
+                    </div>
+                    <div className="flex-1 flex flex-col gap-1">
+                      <h3 className="font-bold text-base text-gray-800 dark:text-white mb-1 line-clamp-2">{borrowing.book?.title}</h3>
+                      <p className="text-gray-600 dark:text-gray-300 text-xs mb-1 line-clamp-1">by {borrowing.book?.author}</p>
+                      <span className="inline-block px-2 py-1 text-xs bg-gradient-primary text-white rounded-full font-medium w-fit mb-1">{borrowing.book?.genre}</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${borrowing.status === 'returned' ? 'bg-green-100 text-green-800' : borrowing.status === 'overdue' ? 'bg-red-100 text-red-800' : 'bg-accent-gold text-white'}`}>
+                          {borrowing.status.charAt(0).toUpperCase() + borrowing.status.slice(1)}
+                        </span>
+                        <span className="text-xs text-gray-400">{formatDate(borrowing.borrowDate)}</span>
+                      </div>
+                    </div>
+                    {borrowing.status === 'overdue' && (
+                      <span className="ml-4 text-red-600 font-bold animate-pulse">Overdue!</span>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
+          </section>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-8xl mb-6 animate-bounce">⚠️</div>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Oops! Something went wrong</h2>
+          <p className="text-red-500 text-lg mb-6">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-6 py-3 bg-gradient-primary text-white rounded-xl hover-lift shadow-glow transition-all duration-200 font-medium"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const activeBorrowings = borrowings.filter(b => b.status === 'borrowed');
+  const returnedBorrowings = borrowings.filter(b => b.status === 'returned');
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary-light via-glass to-accent-teal pb-20 animate-fadeIn">
+      <div className="max-w-6xl mx-auto px-4 pt-12 flex flex-col gap-10">
+        {/* Analytics Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+          <div className="glass rounded-2xl shadow-glow p-6 flex flex-col items-center animate-pop">
+            <span className="text-3xl text-accent-gold mb-2">📚</span>
+            <div className="text-lg font-semibold text-primary-dark">Books Borrowed</div>
+            <div className="text-3xl font-extrabold text-primary-dark mt-1">{borrowings.length}</div>
           </div>
-        </>
-      )}
+          <div className="glass rounded-2xl shadow-glow p-6 flex flex-col items-center animate-pop">
+            <span className="text-3xl text-accent-teal mb-2">⏳</span>
+            <div className="text-lg font-semibold text-primary-dark">Currently Borrowed</div>
+            <div className="text-3xl font-extrabold text-primary-dark mt-1">{activeBorrowings.length}</div>
+          </div>
+          <div className="glass rounded-2xl shadow-glow p-6 flex flex-col items-center animate-pop">
+            <span className="text-3xl text-accent-gold mb-2">📈</span>
+            <div className="text-lg font-semibold text-primary-dark">Avg. Progress</div>
+            <div className="text-3xl font-extrabold text-primary-dark mt-1">{avgProgress}%</div>
+          </div>
+        </div>
+        {/* Current Borrowings */}
+        <section>
+          <h2 className="text-2xl font-bold text-primary-dark mb-4 flex items-center gap-2">
+            <span className="text-accent-teal">📖</span> Current Borrowings
+          </h2>
+          {activeBorrowings.length === 0 ? (
+            <div className="text-gray-500">No active borrowings.</div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+              {activeBorrowings.map(borrowing => (
+                <div key={borrowing.id} className="glass rounded-2xl shadow-card p-5 flex flex-col gap-3 animate-pop">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-24 rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                      {borrowing.book?.image ? (
+                        <img src={borrowing.book.image} alt={borrowing.book.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-gray-400 text-lg">No Cover</span>
+                      )}
+                    </div>
+                    <div className="flex-1 flex flex-col">
+                      <h3 className="font-bold text-lg text-gray-800 dark:text-white mb-1 line-clamp-2">{borrowing.book?.title}</h3>
+                      <p className="text-gray-600 dark:text-gray-300 text-xs mb-1 line-clamp-1">by {borrowing.book?.author}</p>
+                      <span className="inline-block px-2 py-1 text-xs bg-gradient-primary text-white rounded-full font-medium w-fit mb-1">{borrowing.book?.genre}</span>
+                    </div>
+                  </div>
+                  {/* Progress Bar */}
+                  <div className="mt-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-gray-500">Progress</span>
+                      <span className="text-xs text-primary-dark font-bold">{borrowing.progress || 0}%</span>
+                    </div>
+                    <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-accent-teal transition-all duration-500" style={{ width: `${borrowing.progress || 0}%` }}></div>
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">Last read: {borrowing.lastReadAt ? formatDate(borrowing.lastReadAt) : 'N/A'}</div>
+                    
+                    {/* Progress Update Form */}
+                    {progressForms[borrowing.id]?.show ? (
+                      <div className="mt-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={progressForms[borrowing.id].value}
+                            onChange={(e) => setProgressForms(prev => ({
+                              ...prev,
+                              [borrowing.id]: { ...prev[borrowing.id], value: parseInt(e.target.value) }
+                            }))}
+                            className="flex-1"
+                          />
+                          <span className="text-xs font-bold text-primary-dark min-w-[2.5rem]">
+                            {progressForms[borrowing.id].value}%
+                          </span>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleProgressUpdate(borrowing.id, progressForms[borrowing.id].value)}
+                            disabled={updatingProgress[borrowing.id]}
+                            className="flex-1 btn-accent py-1 rounded-lg text-xs font-semibold"
+                          >
+                            {updatingProgress[borrowing.id] ? 'Updating...' : 'Update'}
+                          </button>
+                          <button
+                            onClick={() => setProgressForms(prev => ({ ...prev, [borrowing.id]: { show: false, value: 0 } }))}
+                            className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setProgressForms(prev => ({ 
+                          ...prev, 
+                          [borrowing.id]: { show: true, value: borrowing.progress || 0 } 
+                        }))}
+                        className="w-full mt-2 btn-accent py-1 rounded-lg text-xs font-semibold"
+                      >
+                        📊 Update Progress
+                      </button>
+                    )}
+                  </div>
+                  {borrowing.status === 'borrowed' && (
+                    <button
+                      type="button"
+                      aria-label="Return this book"
+                      tabIndex={0}
+                      className="btn-success px-4 py-2 rounded-xl font-semibold shadow-glow hover-lift transition-all duration-200"
+                      onClick={() => {
+                        console.log('Return clicked', borrowing.id);
+                        handleReturn(borrowing.id);
+                      }}
+                      disabled={returning[borrowing.id]}
+                    >
+                      {returning[borrowing.id] ? 'Returning...' : 'Return'}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+        {/* Borrow History Timeline */}
+        <section>
+          <h2 className="text-2xl font-bold text-primary-dark mb-4 flex items-center gap-2">
+            <span className="text-accent-gold">🕑</span> Borrow History
+          </h2>
+          {borrowings.length === 0 ? (
+            <div className="text-gray-500">No borrow history yet.</div>
+          ) : (
+            <div className="space-y-6">
+              {borrowings.map(borrowing => (
+                <div key={borrowing.id} className="glass rounded-xl shadow-card p-4 flex flex-col sm:flex-row items-center gap-4 animate-fadeIn">
+                  <div className="w-14 h-20 rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                    {borrowing.book?.image ? (
+                      <img src={borrowing.book.image} alt={borrowing.book.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-gray-400 text-lg">No Cover</span>
+                    )}
+                  </div>
+                  <div className="flex-1 flex flex-col gap-1">
+                    <h3 className="font-bold text-base text-gray-800 dark:text-white mb-1 line-clamp-2">{borrowing.book?.title}</h3>
+                    <p className="text-gray-600 dark:text-gray-300 text-xs mb-1 line-clamp-1">by {borrowing.book?.author}</p>
+                    <span className="inline-block px-2 py-1 text-xs bg-gradient-primary text-white rounded-full font-medium w-fit mb-1">{borrowing.book?.genre}</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${borrowing.status === 'returned' ? 'bg-green-100 text-green-800' : borrowing.status === 'overdue' ? 'bg-red-100 text-red-800' : 'bg-accent-gold text-white'}`}>
+                        {borrowing.status.charAt(0).toUpperCase() + borrowing.status.slice(1)}
+                      </span>
+                      <span className="text-xs text-gray-400">{formatDate(borrowing.borrowDate)}</span>
+                    </div>
+                  </div>
+                  {borrowing.status === 'overdue' && (
+                    <span className="ml-4 text-red-600 font-bold animate-pulse">Overdue!</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
