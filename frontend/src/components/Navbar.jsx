@@ -47,16 +47,16 @@ const Navbar = ({ isAuthenticated, onLogout, darkMode, toggleDarkMode, user, aut
               <span className="text-xl font-bold text-gradient-primary tracking-tight">LibraryHub</span>
               <span className="text-xs text-gray-500 dark:text-gray-400 -mt-1">Your Digital Library</span>
             </div>
-          </div>
+      </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
-            {/* Navigation links */}
-            {isAuthenticated && navLinks.map(link => (
-              <Link
-                to={link.to}
-                key={link.to}
-                aria-label={link.label}
+        {/* Navigation links */}
+        {isAuthenticated && navLinks.map(link => (
+          <Link
+            to={link.to}
+            key={link.to}
+            aria-label={link.label}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-300 hover-lift ${
                   location.pathname === link.to
                     ? 'bg-gradient-primary text-white shadow-glow'
@@ -65,31 +65,31 @@ const Navbar = ({ isAuthenticated, onLogout, darkMode, toggleDarkMode, user, aut
               >
                 <span className="text-lg">{link.icon}</span>
                 <span>{link.label}</span>
-              </Link>
-            ))}
+          </Link>
+        ))}
 
-            {/* Theme toggle */}
-            <button
+        {/* Theme toggle */}
+        <button
               className="relative p-3 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-300 hover-lift shadow-soft"
-              onClick={toggleDarkMode}
-              aria-label="Toggle theme"
-            >
+          onClick={toggleDarkMode}
+          aria-label="Toggle theme"
+        >
               <div className="relative">
-                {darkMode ? (
-                  <span className="text-xl">🌙</span>
-                ) : (
-                  <span className="text-xl">☀️</span>
-                )}
+          {darkMode ? (
+            <span className="text-xl">🌙</span>
+          ) : (
+            <span className="text-xl">☀️</span>
+          )}
                 <div className="absolute -inset-1 bg-gradient-accent rounded-xl blur opacity-0 hover:opacity-20 transition-opacity duration-300"></div>
               </div>
-            </button>
+        </button>
 
             {/* Auth buttons */}
-            {authLoading ? (
+        {authLoading ? (
               <div className="flex items-center justify-center w-24 h-10">
                 <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-200 border-t-primary-600"></div>
-              </div>
-            ) : isAuthenticated ? (
+          </div>
+        ) : isAuthenticated ? (
               <div className="flex items-center gap-4">
                 {/* User profile */}
                 <div className="relative" ref={profileRef}>
