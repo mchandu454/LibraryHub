@@ -210,7 +210,7 @@ function Home() {
         genre: googleBook.genre,
         description: googleBook.description,
         image: googleBook.image
-      }, { withCredentials: true });
+      });
       const localBook = res.data.book;
       // Borrow as usual
       await axios.post('/api/borrowings', { bookId: localBook.id }, { withCredentials: true });
@@ -239,7 +239,7 @@ function Home() {
           genre: googleBook.genre,
           description: googleBook.description,
           image: googleBook.image
-        }, { withCredentials: true });
+        });
         localBook = res.data.book;
         // Optionally refresh local books
         const booksRes = await axios.get('/api/books');
