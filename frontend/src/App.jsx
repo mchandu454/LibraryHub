@@ -205,32 +205,32 @@ function App() {
                 </div>
               </div>
             }>
-              <Routes>
-                <Route path="/" element={<Landing />} />
-                <Route path="/home" element={<Home />} />
-                <Route path="/book/:id" element={<BookDetail />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                {/* ❌ Fallback */}
-                <Route path="*" element={
-                  <div className="text-center py-12 sm:py-16 lg:py-20">
-                    <div className="mb-6 sm:mb-8">
-                      <div className="text-6xl sm:text-8xl mb-4">📚</div>
-                      <h1 className="heading-1 mb-4">404 - Page Not Found</h1>
-                      <p className="body-text text-lg">
-                        The page you're looking for doesn't exist.
-                      </p>
-                    </div>
-                    <button 
-                      onClick={() => navigate('/')} 
-                      className="btn-primary px-6 sm:px-8 py-3 sm:py-4"
-                    >
-                      Go Home
-                    </button>
-                  </div>
-                } />
-              </Routes>
+                  <Routes>
+                    <Route path="/" element={<Landing />} />
+                    <Route path="/home" element={<Home />} />
+                    <Route path="/book/:id" element={<BookDetail />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    {/* ❌ Fallback */}
+                    <Route path="*" element={
+                      <div className="text-center py-12 sm:py-16 lg:py-20">
+                        <div className="mb-6 sm:mb-8">
+                          <div className="text-6xl sm:text-8xl mb-4">📚</div>
+                          <h1 className="heading-1 mb-4">404 - Page Not Found</h1>
+                          <p className="body-text text-lg">
+                            The page you're looking for doesn't exist.
+                          </p>
+                        </div>
+                        <button 
+                          onClick={() => navigate('/')} 
+                          className="btn-primary px-6 sm:px-8 py-3 sm:py-4"
+                        >
+                          Go Home
+                        </button>
+                      </div>
+                    } />
+                  </Routes>
             </Suspense>
           </div>
         </div>
