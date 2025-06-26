@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const dotenv = require("dotenv");
-const serverless = require("serverless-http");
 
 const authRoutes = require("./routes/auth.routes");
 const memberRoutes = require("./routes/member.routes");
@@ -63,5 +62,5 @@ if (require.main === module) {
   });
 }
 
-// ✅ Export for Vercel
-module.exports = serverless(app);
+// ✅ Export for Render/Node
+module.exports = app;
