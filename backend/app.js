@@ -24,7 +24,8 @@ app.use(cors({
       'https://libraryhub.vercel.app',
       'https://libraryhub-git-main-yourusername.vercel.app',
       'https://library-hub-five.vercel.app',
-      'https://library-ifhbgrp8o-mchandu454s-projects.vercel.app'
+      'https://library-ifhbgrp8o-mchandu454s-projects.vercel.app',
+      'https://library-dxbc6j84o-mchandu454s-projects.vercel.app'
     ];
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
