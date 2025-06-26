@@ -57,14 +57,14 @@ const Navbar = ({ isAuthenticated, onLogout, darkMode, toggleDarkMode, user, aut
             to={link.to}
             key={link.to}
             aria-label={link.label}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-300 hover-lift ${
-                  location.pathname === link.to
-                    ? 'bg-gradient-primary text-white shadow-glow'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                }`}
-              >
-                <span className="text-lg">{link.icon}</span>
-                <span>{link.label}</span>
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-300 hover-lift ${
+              location.pathname === link.to
+                ? 'bg-gradient-primary text-white shadow-glow'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+            }`}
+          >
+            <span className="text-lg">{link.icon}</span>
+            <span>{link.label}</span>
           </Link>
         ))}
 
