@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const dotenv = require("dotenv");
+const serverless = require("serverless-http");
 
 const authRoutes = require("./routes/auth.routes");
 const memberRoutes = require("./routes/member.routes");
@@ -14,20 +15,16 @@ dotenv.config();
 
 const app = express();
 
-// ✅ Middlewares (order matters!)
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
     const allowedOrigins = [
-      'http://localhost:5173', // Development
-      'http://localhost:3000', // Alternative dev port
-      'https://your-frontend-domain.vercel.app', // Replace with your actual frontend domain
-      'https://libraryhub.vercel.app', // Example domain
-      'https://libraryhub-git-main-yourusername.vercel.app' // Vercel preview domains
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://your-frontend-domain.vercel.app',
+      'https://libraryhub.vercel.app',
+      'https://libraryhub-git-main-yourusername.vercel.app'
     ];
-    
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -39,7 +36,7 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ Routes
+// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/members", memberRoutes);
 app.use("/api/books", bookRoutes);
@@ -51,22 +48,20 @@ app.get("/", (req, res) => {
   res.send("LibraryHub API is running 🚀");
 });
 
-// Server startup for Vercel
-const PORT = process.env.PORT || 5000;
-
-// Only start the server if this file is run directly (not imported)
+// ✅ Local server start
 if (require.main === module) {
   const db = require("./models");
   const sequelize = db.sequelize;
 
   sequelize.authenticate().then(() => {
     console.log("Connected to PostgreSQL ✅");
-    app.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
+    app.listen(process.env.PORT || 5000, () => {
+      console.log(`Server running at http://localhost:${process.env.PORT || 5000}`);
     });
   }).catch(err => {
     console.error("DB connection error ❌", err);
   });
 }
 
-module.exports = app;
+// ✅ Export for Vercel
+module.exports = serverless(app);
