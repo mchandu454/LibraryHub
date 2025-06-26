@@ -52,7 +52,7 @@ app.get("/", (req, res) => {
 // TEMPORARY: Run seeders from a web request
 app.get('/run-seed', async (req, res) => {
   const { exec } = require('child_process');
-  exec('./node_modules/.bin/sequelize db:seed:all', (error, stdout, stderr) => {
+  exec('node ./node_modules/sequelize-cli/lib/sequelize db:seed:all', (error, stdout, stderr) => {
     if (error) {
       res.status(500).send(stderr);
     } else {
