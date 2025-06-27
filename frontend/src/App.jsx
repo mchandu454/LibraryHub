@@ -86,7 +86,10 @@ class ErrorBoundary extends React.Component {
 }
 
 function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const storedUser = localStorage.getItem('user');
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(localStorage.getItem('token')));
   const [authLoading, setAuthLoading] = useState(true);
   const location = useLocation();
@@ -110,6 +113,23 @@ function App() {
     }
   }, [darkMode]);
 
+  // Restore user info and validate token on app load
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      api.get('/members/me')
+        .then(res => {
+          setUser(res.data.user);
+          localStorage.setItem('user', JSON.stringify(res.data.user));
+        })
+        .catch(() => {
+          setUser(null);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        });
+    }
+  }, []);
+
   // Fetch user info if authenticated
   useEffect(() => {
     const fetchUser = async () => {
@@ -118,8 +138,10 @@ function App() {
         try {
           const res = await api.get('/members/me');
           setUser(res.data.user);
-          localStorage.setItem('token', res.data.token);
-          api.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+          if (res.data.token && res.data.token !== 'undefined' && res.data.token !== null) {
+            localStorage.setItem('token', res.data.token);
+            api.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+          }
           window.dispatchEvent(new Event('storage'));
         } catch (err) {
           setUser(null);
@@ -197,26 +219,6 @@ function App() {
     
     return config;
   });
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      setIsAuthenticated(true);
-      const user = localStorage.getItem('user');
-      if (user) {
-        try {
-          setUser(JSON.parse(user));
-        } catch (err) {
-          console.error('Error parsing user data:', err);
-          localStorage.removeItem('user');
-          setUser(null);
-        }
-      }
-    } else {
-      setIsAuthenticated(false);
-      setUser(null);
-    }
-  }, []);
 
   return (
     <ErrorBoundary>

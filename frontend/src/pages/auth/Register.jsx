@@ -44,7 +44,10 @@ const Register = () => {
       
       console.log('Registration successful:', registerResponse.data);
       
-      localStorage.setItem('token', registerResponse.data.token);
+      if (registerResponse.data.token && registerResponse.data.token !== 'undefined' && registerResponse.data.token !== null) {
+        localStorage.setItem('token', registerResponse.data.token);
+        api.defaults.headers.common['Authorization'] = `Bearer ${registerResponse.data.token}`;
+      }
       localStorage.setItem('user', JSON.stringify(registerResponse.data.user));
       
       toast.success("Registration successful! Please login to continue.");

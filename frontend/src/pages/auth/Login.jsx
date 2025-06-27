@@ -19,21 +19,29 @@ const Login = () => {
     try {
       // Attempt login
       const res = await api.post("/auth/login", { email, password });
-      const { token, user } = res.data;
+      const { token } = res.data;
 
-      if (!token) {
-        throw new Error("No token received from server.");
+      if (!token || token === 'undefined' || token === null) {
+        throw new Error("No valid token received from server.");
       }
 
-      // Store token and user in localStorage
+      // Store token in localStorage and set Axios header
       localStorage.setItem('token', token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      if (user) {
-        localStorage.setItem('user', JSON.stringify(user));
-      }
+      
 
-      // Optionally notify other tabs (if needed)
-      // window.dispatchEvent(new Event('storage'));
+      // Fetch latest user info from backend to ensure sync
+      try {
+        const userRes = await api.get('/members/me');
+        const user = userRes.data.user;
+        if (user) {
+          localStorage.setItem('user', JSON.stringify(user));
+        }
+      } catch (userErr) {
+        // If token is invalid, clean up and show error
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        throw new Error('Token invalid or expired. Please log in again.');
+      }
 
       toast.success("Login successful!");
       navigate("/home");

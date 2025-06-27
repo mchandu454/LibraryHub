@@ -127,6 +127,25 @@ function Dashboard() {
     }
   };
 
+  const handleProfileUpdate = async (updatedData) => {
+    try {
+      const res = await api.put('/members/me', updatedData);
+
+      // SET TOKEN AND AXIOS HEADER HERE IF BACKEND RETURNS NEW TOKEN
+      if (res.data.token) {
+        localStorage.setItem('token', res.data.token);
+        api.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+      }
+      if (res.data.user) {
+        localStorage.setItem('user', JSON.stringify(res.data.user));
+        setUser(res.data.user); // or update context/redux
+      }
+      toast.success('Profile updated!');
+    } catch (err) {
+      toast.error('Profile update failed!');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-light via-glass to-accent-teal pb-20 animate-fadeIn">
