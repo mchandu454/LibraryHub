@@ -3,5 +3,8 @@
     "jsonwebtoken": "^9.0.2",
     "react-toastify": "^11.0.5",
     "serverless-http": "^3.2.0"
+  },
+  "scripts": {
+    "start": "node server.js"
   }
 }
