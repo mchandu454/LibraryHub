@@ -7,7 +7,8 @@
     "start": "node server.js",
     "dev": "nodemon backend/server.js",
     "seed": "sequelize-cli db:seed:all",
-    "migrate": "sequelize-cli db:migrate"
+    "migrate": "sequelize-cli db:migrate",
+    "postinstall": "chmod +x ./node_modules/.bin/sequelize-cli"
   },
   "keywords": [],
   "author": "",
