@@ -1,7 +1,7 @@
 // File: src/App.jsx
 import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import axios from "axios";
+import api from './api';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Navbar from "./components/Navbar";
@@ -116,9 +116,10 @@ function App() {
       setAuthLoading(true);
       if (isAuthenticated) {
         try {
-          const res = await axios.get('/api/members/me');
+          const res = await api.get('/members/me');
           setUser(res.data.user);
           localStorage.setItem('token', res.data.token);
+          api.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
           window.dispatchEvent(new Event('storage'));
         } catch (err) {
           setUser(null);
@@ -138,7 +139,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await axios.post("/api/auth/logout");
+      await api.post("/auth/logout");
       setUser(null);
       setIsAuthenticated(false);
       localStorage.removeItem('token');
@@ -175,22 +176,45 @@ function App() {
   }, [isAuthenticated, location.pathname, navigate]);
 
   // Set axios defaults
-  axios.defaults.baseURL = import.meta.env.VITE_API_URL;
-  axios.interceptors.request.use(config => {
+  api.defaults.baseURL = import.meta.env.VITE_API_URL;
+  api.interceptors.request.use(config => {
     const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    
+    // For our backend API routes
+    if (config.url.startsWith('/api')) {
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
+    
+    // For Google Books API routes
+    if (config.url.includes('googleapis.com/books')) {
+      config.params = {
+        ...config.params,
+        key: import.meta.env.VITE_GOOGLE_BOOKS_API_KEY
+      };
+    }
+    
     return config;
   });
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    setIsAuthenticated(!!token);
     if (token) {
-      // Optionally, set user from localStorage
+      setIsAuthenticated(true);
       const user = localStorage.getItem('user');
-      if (user) setUser(JSON.parse(user));
+      if (user) {
+        try {
+          setUser(JSON.parse(user));
+        } catch (err) {
+          console.error('Error parsing user data:', err);
+          localStorage.removeItem('user');
+          setUser(null);
+        }
+      }
+    } else {
+      setIsAuthenticated(false);
+      setUser(null);
     }
   }, []);
 

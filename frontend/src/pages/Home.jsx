@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api';
+import axios from 'axios'; // Only for Google Books API calls
 import { Link, useNavigate } from 'react-router-dom';
-
-axios.defaults.baseURL = import.meta.env.VITE_API_URL;
 
 function Home() {
   const [allBooks, setAllBooks] = useState([]);
@@ -36,7 +35,7 @@ function Home() {
       setLoading(true);
       setError(null);
       try {
-        const res = await axios.get('/api/books');
+        const res = await api.get('/books');
         setAllBooks(res.data.books || []);
         setFilteredBooks(res.data.books || []);
         
@@ -60,7 +59,7 @@ function Home() {
   useEffect(() => {
     const fetchTrending = async () => {
       try {
-        const res = await axios.get('/api/books/trending');
+        const res = await api.get('/books/trending');
         // Trending books come as { trending: [ { bookId, borrowCount, Book: {...} } ] }
         setTrendingBooks((res.data.trending || []).map(item => ({
           ...item.Book,
@@ -205,7 +204,7 @@ function Home() {
     setBorrowingGoogle(bg => ({ ...bg, [googleBook.id]: true }));
     try {
       // Import to local DB
-      const res = await axios.post('/api/books/import-google', {
+      const res = await api.post('/books/import-google', {
         googleId: googleBook.id,
         title: googleBook.title,
         author: googleBook.author,
@@ -215,9 +214,9 @@ function Home() {
       });
       const localBook = res.data.book;
       // Borrow as usual
-      await axios.post('/api/borrowings', { bookId: localBook.id }, { withCredentials: true });
+      await api.post('/borrowings', { bookId: localBook.id }, { withCredentials: true });
       // Refresh local books
-      const booksRes = await axios.get('/api/books');
+      const booksRes = await api.get('/books');
       setAllBooks(booksRes.data.books || []);
       setFilteredBooks(booksRes.data.books || []);
       setBorrowingGoogle(bg => ({ ...bg, [googleBook.id]: false }));
@@ -228,30 +227,8 @@ function Home() {
   };
 
   // Helper: Open Google Book as local BookDetail
-  const handleOpenGoogleBook = async (googleBook) => {
-    try {
-      // Try to find in local books first
-      let localBook = allBooks.find(b => b.title === googleBook.title && b.author === googleBook.author);
-      if (!localBook) {
-        // Import to local DB
-        const res = await axios.post('/api/books/import-google', {
-          googleId: googleBook.id,
-          title: googleBook.title,
-          author: googleBook.author,
-          genre: googleBook.genre,
-          description: googleBook.description,
-          image: googleBook.image
-        });
-        localBook = res.data.book;
-        // Optionally refresh local books
-        const booksRes = await axios.get('/api/books');
-        setAllBooks(booksRes.data.books || []);
-        setFilteredBooks(booksRes.data.books || []);
-      }
-      navigate(`/book/${localBook.id}`);
-    } catch (err) {
-      alert('Failed to open Google Book.');
-    }
+  const handleOpenGoogleBook = (googleBook) => {
+    navigate(`/book/${googleBook.id}?source=google`);
   };
 
   // Add a function to fetch books by search
@@ -259,7 +236,7 @@ function Home() {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.get(`/api/books?search=${encodeURIComponent(searchTerm)}`);
+      const res = await api.get(`/books?search=${encodeURIComponent(searchTerm)}`);
       setAllBooks(res.data.books || []);
       setFilteredBooks(res.data.books || []);
     } catch (err) {
@@ -381,7 +358,11 @@ function Home() {
                   <div
                     key={book.id}
                     className="px-4 py-2 hover:bg-accent-teal hover:text-white cursor-pointer transition-colors flex items-center gap-2"
-                    onMouseDown={() => { setSearch(book.title); setShowSuggestions(false); handleOpenGoogleBook(book); }}
+                    onMouseDown={() => {
+                      setSearch(book.title);
+                      setShowSuggestions(false);
+                      navigate(`/book/${book.id}?source=google`);
+                    }}
                   >
                     <span className="w-8 h-10 flex-shrink-0 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
                       {book.image ? <img src={book.image} alt={book.title} className="w-full h-full object-cover" /> : <span className="text-gray-400 text-xs">No Cover</span>}

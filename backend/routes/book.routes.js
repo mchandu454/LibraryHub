@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const verifyToken = require("../middleware/auth.middleware");
+const { authenticateToken } = require("../middleware/auth.middleware");
 const {
   addBook,
   getAllBooks,
@@ -15,15 +15,15 @@ const {
 
 // Public routes
 router.get("/", getAllBooks);
-router.get("/trending", getTrendingBooks); // ✅ must be before `/:id`
+router.get("/trending", getTrendingBooks); // must be before `/:id`
 router.get("/:id", getBookById);
+router.get("/:id/ratings", getBookRatings);
 
-// Protected routes
-router.post("/", verifyToken, addBook);
-router.put("/:id", verifyToken, updateBook);
-router.delete("/:id", verifyToken, deleteBook);
-router.post('/:id/rate', verifyToken, rateBook);
-router.get('/:id/ratings', getBookRatings);
-router.post('/import-google', verifyToken, importGoogleBook);
+// Protected routes (authenticated users only)
+router.post("/", authenticateToken, addBook);
+router.put("/:id", authenticateToken, updateBook);
+router.delete("/:id", authenticateToken, deleteBook);
+router.post('/:id/rate', authenticateToken, rateBook);
+router.post('/import-google', authenticateToken, importGoogleBook);
 
 module.exports = router;

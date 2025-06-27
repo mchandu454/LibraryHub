@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import api from '../../api'; // adjust the path as needed
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { toast } from 'react-toastify';
 
@@ -15,17 +15,40 @@ const Login = () => {
     e.preventDefault();
     setError("");
     setLoading(true);
+
     try {
-      const res = await axios.post("/api/auth/login", { email, password });
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
-      console.log(res.data);
-      window.dispatchEvent(new Event('storage'));
+      // Attempt login
+      const res = await api.post("/auth/login", { email, password });
+      const { token, user } = res.data;
+
+      if (!token) {
+        throw new Error("No token received from server.");
+      }
+
+      // Store token and user in localStorage
+      localStorage.setItem('token', token);
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      if (user) {
+        localStorage.setItem('user', JSON.stringify(user));
+      }
+
+      // Optionally notify other tabs (if needed)
+      // window.dispatchEvent(new Event('storage'));
+
       toast.success("Login successful!");
       navigate("/home");
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
-      toast.error(err.response?.data?.message || "Login failed");
+      // Extract error message
+      const errorMessage =
+        err.response?.data?.message ||
+        err.message ||
+        "Login failed. Please try again.";
+      setError(errorMessage);
+      toast.error(errorMessage);
+
+      // Clean up any partial data
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
     } finally {
       setLoading(false);
     }

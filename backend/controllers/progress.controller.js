@@ -11,6 +11,11 @@ const upsertProgress = async (req, res) => {
     if (progress < 0 || progress > 100) {
       return res.status(400).json({ message: 'Progress must be 0-100.' });
     }
+    // Check ownership
+    const borrowing = await Borrowing.findByPk(borrowingId);
+    if (!borrowing || borrowing.userId !== req.user.id) {
+      return res.status(403).json({ message: 'Forbidden: Not your borrowing.' });
+    }
     let record = await Progress.findOne({ where: { borrowingId } });
     if (record) {
       record.progress = progress;
@@ -29,6 +34,10 @@ const upsertProgress = async (req, res) => {
 const getProgress = async (req, res) => {
   try {
     const { borrowingId } = req.params;
+    const borrowing = await Borrowing.findByPk(borrowingId);
+    if (!borrowing || borrowing.userId !== req.user.id) {
+      return res.status(403).json({ message: 'Forbidden: Not your borrowing.' });
+    }
     const record = await Progress.findOne({ where: { borrowingId } });
     if (!record) return res.status(404).json({ message: 'No progress found.' });
     res.status(200).json({ progress: record });
@@ -41,6 +50,9 @@ const getProgress = async (req, res) => {
 const getMemberAnalytics = async (req, res) => {
   try {
     const { id } = req.params;
+    if (parseInt(id, 10) !== req.user.id) {
+      return res.status(403).json({ message: 'Forbidden: You can only view your own analytics.' });
+    }
     // Find all borrowings for this user
     const borrowings = await Borrowing.findAll({ where: { userId: id } });
     const borrowingIds = borrowings.map(b => b.id);

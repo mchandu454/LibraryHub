@@ -7,7 +7,6 @@ const authRoutes = require("./routes/auth.routes");
 const memberRoutes = require("./routes/member.routes");
 const bookRoutes = require("./routes/book.routes");
 const borrowRoutes = require("./routes/borrow.routes");
-const adminRoutes = require("./routes/admin.routes");
 const progressRoutes = require("./routes/progress.routes");
 
 dotenv.config();
@@ -38,29 +37,17 @@ app.use("/api/auth", authRoutes);
 app.use("/api/members", memberRoutes);
 app.use("/api/books", bookRoutes);
 app.use("/api/borrowings", borrowRoutes);
-app.use("/api/admin", adminRoutes);
 app.use("/api/progress", progressRoutes);
 
 app.get("/", (req, res) => {
   res.send("LibraryHub API is running 🚀");
 });
 
-
-
-// ✅ Local server start
-if (require.main === module) {
-  const db = require("./models");
-  const sequelize = db.sequelize;
-
-  sequelize.authenticate().then(() => {
-    console.log("Connected to PostgreSQL ✅");
-    app.listen(process.env.PORT || 5000, () => {
-      console.log(`Server running at http://localhost:${process.env.PORT || 5000}`);
-    });
-  }).catch(err => {
-    console.error("DB connection error ❌", err);
-  });
-}
+// Add global error handler middleware
+app.use((err, req, res, next) => {
+  console.error('Global error handler:', err);
+  res.status(err.status || 500).json({ message: err.message || 'Internal Server Error' });
+});
 
 // ✅ Export for Render/Node
 module.exports = app;

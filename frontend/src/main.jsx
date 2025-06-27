@@ -2,13 +2,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import { BrowserRouter } from "react-router-dom";
-import axios from "axios";
+import api from './api';
 import "./index.css";
-
-// Configure axios base URL for production
-if (import.meta.env.VITE_API_URL) {
-  axios.defaults.baseURL = import.meta.env.VITE_API_URL;
-}
 
 // Initialize dark mode before rendering
 const initializeDarkMode = () => {
@@ -31,6 +26,11 @@ const initializeDarkMode = () => {
 
 // Initialize dark mode
 initializeDarkMode();
+
+const token = localStorage.getItem('token');
+if (token) {
+  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+}
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

@@ -5,6 +5,7 @@ const sequelize = db.sequelize;
 
 const PORT = process.env.PORT || 5000;
 
+// server.js is the only place that starts the server
 sequelize.authenticate().then(() => {
   console.log("Connected to PostgreSQL ✅");
   app.listen(PORT, () => {

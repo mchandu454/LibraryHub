@@ -1,6 +1,6 @@
 // frontend/src/pages/user/Dashboard.jsx
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../api';
 import { toast } from 'react-toastify';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -29,8 +29,8 @@ function Dashboard() {
       setUserLoading(true);
       try {
         const [userRes, borrowingsRes] = await Promise.all([
-          axios.get('/api/members/me'),
-          axios.get('/api/borrowings/history')
+          api.get('/members/me'),
+          api.get('/borrowings/history')
         ]);
         
         setUser(userRes.data.user);
@@ -60,10 +60,10 @@ function Dashboard() {
   const handleReturn = async (borrowingId) => {
     setReturning(prev => ({ ...prev, [borrowingId]: true }));
     try {
-      await axios.put(`/api/borrowings/${borrowingId}/return`, {});
+      await api.put(`/borrowings/${borrowingId}/return`, {});
       toast.success('Book returned successfully!');
       // Refresh borrowings
-      const res = await axios.get('/api/borrowings/history');
+      const res = await api.get('/borrowings/history');
       setBorrowings(res.data.borrowings || []);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to return book.');
@@ -81,7 +81,7 @@ function Dashboard() {
 
     setUpdatingProgress(prev => ({ ...prev, [borrowingId]: true }));
     try {
-      await axios.post('/api/progress', {
+      await api.post('/progress', {
         borrowingId,
         progress: newProgress
       });
@@ -162,8 +162,8 @@ function Dashboard() {
                   <div key={borrowing.id} className="glass rounded-2xl shadow-card p-5 flex flex-col gap-3 animate-pop">
                     <div className="flex items-center gap-4">
                       <div className="w-16 h-24 rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                        {borrowing.book?.image ? (
-                          <img src={borrowing.book.image} alt={borrowing.book.title} className="w-full h-full object-cover" />
+                        {borrowing.book?.image || borrowing.book?.coverImage ? (
+                          <img src={borrowing.book.image || borrowing.book.coverImage} alt={borrowing.book.title} className="w-full h-full object-cover" />
                         ) : (
                           <span className="text-gray-400 text-lg">No Cover</span>
                         )}

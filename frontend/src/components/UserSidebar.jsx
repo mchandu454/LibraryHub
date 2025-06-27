@@ -1,6 +1,6 @@
 import { useContext } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api';
 import { toast } from 'react-toastify';
 import { DarkModeContext } from '../App';
 
@@ -11,7 +11,7 @@ const UserSidebar = ({ onLogout }) => {
 
   const handleLogout = async () => {
     try {
-      await axios.post('/api/auth/logout', {}, { withCredentials: true });
+      await api.post('/auth/logout');
       toast.success('Logged out successfully!');
       navigate('/login');
       if (onLogout) onLogout();

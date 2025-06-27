@@ -28,29 +28,39 @@ const register = async (req, res) => {
     // Create new user
     const newUser = await User.create({ name, email, password });
 
-    // Generate JWT token for new user
+    // Generate JWT token
     const token = jwt.sign(
-      { id: newUser.id, email: newUser.email },
+      { id: newUser.id, email: newUser.email, isAdmin: newUser.isAdmin },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    res.status(201).json({
-      message: "User registered successfully",
-      token,
-      user: {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        isAdmin: newUser.isAdmin,
-      },
-    });
+    // Set token in both cookie and response body
+    res
+      .cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: "Lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      })
+      .status(201)
+      .json({
+        message: "User registered successfully",
+        token,
+        user: {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          isAdmin: newUser.isAdmin,
+        },
+      });
   } catch (error) {
     console.error("❌ REGISTER ERROR:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
 
+// ✅ FIXED LOGIN CONTROLLER: returns token in response body, no cookie
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -75,17 +85,18 @@ const login = async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: user.id, email: user.email, isAdmin: user.isAdmin },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
+    // Set token in both cookie and response body
     res
       .cookie("token", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // true only in production with HTTPS
-        sameSite: "Lax", // prevents cross-site issues
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: "Lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       })
       .status(200)
       .json({
@@ -106,14 +117,8 @@ const login = async (req, res) => {
 
 const logout = async (req, res) => {
   try {
-    res
-      .clearCookie("token", {
-        httpOnly: true,
-        secure: false,
-        sameSite: "Lax",
-      })
-      .status(200)
-      .json({ message: "Logout successful" });
+    // Clear the token cookie
+    res.clearCookie("token").status(200).json({ message: "Logout successful" });
   } catch (error) {
     console.error("❌ LOGOUT ERROR:", error);
     res.status(500).json({ message: "Server error" });

@@ -159,12 +159,12 @@ const getOverdueBorrowings = async (req, res) => {
     const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
     const overdue = await Borrowing.findAll({
       where: {
+        userId: req.user.id,
         returnedAt: null,
         borrowedAt: { [db.Sequelize.Op.lt]: fourteenDaysAgo }
       },
       include: [
-        { model: Book, as: 'book' },
-        { model: db.User, attributes: ['id', 'name', 'email'] }
+        { model: Book, as: 'book' }
       ],
       order: [['borrowedAt', 'ASC']]
     });

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import api from '../api';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
 const BookDetail = () => {
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const [book, setBook] = useState(null);
   const [relatedBooks, setRelatedBooks] = useState([]);
@@ -26,22 +28,22 @@ const BookDetail = () => {
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
   // TODO: Replace with real user auth state
   const isLoggedIn = Boolean(localStorage.getItem('token'));
+  const [isGoogleSource, setIsGoogleSource] = useState(false);
+  const [allBooks, setAllBooks] = useState([]);
 
   useEffect(() => {
     const fetchBook = async () => {
       setLoading(true);
       setError(null);
-      try {
-        console.log('Fetching book with ID:', id);
-        const res = await axios.get(`/api/books/${id}`);
-        console.log('Book data received:', res.data);
-        setBook(res.data.book);
-      } catch (err) {
-        // If not found in local API, try Google Books API
-        console.error('Error fetching book from local API, trying Google Books API:', err);
+      // Check if source=google in query string
+      const params = new URLSearchParams(location.search);
+      const isGoogle = params.get('source') === 'google';
+      setIsGoogleSource(isGoogle);
+      if (isGoogle) {
+        // Always fetch from Google Books API
         try {
           const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY;
-          const googleRes = await axios.get(`https://www.googleapis.com/books/v1/volumes/${id}?key=${apiKey}`);
+          const googleRes = await axios.get(`https://www.googleapis.com/books/v1/volumes/${id}${apiKey ? `?key=${apiKey}` : ''}`);
           const gBook = googleRes.data;
           if (gBook && gBook.volumeInfo) {
             setBook({
@@ -52,27 +54,64 @@ const BookDetail = () => {
               image: gBook.volumeInfo.imageLinks?.thumbnail || '',
               genre: gBook.volumeInfo.categories?.join(', ') || 'Unknown',
               available: true, // Assume available for Google Books
-              // Add more fields as needed
+              pageCount: gBook.volumeInfo.pageCount,
+              publishedDate: gBook.volumeInfo.publishedDate,
+              publisher: gBook.volumeInfo.publisher,
+              infoLink: gBook.volumeInfo.infoLink,
             });
           } else {
             setError('Book not found.');
           }
         } catch (gErr) {
-          console.error('Error fetching book from Google Books API:', gErr);
-          setError('Failed to load book details.');
+          setError('Failed to load book details from Google Books.');
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
+      // Try local DB first
+      try {
+        const res = await api.get(`/books/${id}`);
+        setBook(res.data.book);
+      } catch (err) {
+        // If not found in local API, fallback to Google Books API
+        try {
+          const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY;
+          const googleRes = await axios.get(`https://www.googleapis.com/books/v1/volumes/${id}${apiKey ? `?key=${apiKey}` : ''}`);
+          const gBook = googleRes.data;
+          if (gBook && gBook.volumeInfo) {
+            setBook({
+              id: gBook.id,
+              title: gBook.volumeInfo.title,
+              author: gBook.volumeInfo.authors?.join(', ') || 'Unknown',
+              description: gBook.volumeInfo.description || 'No description available.',
+              image: gBook.volumeInfo.imageLinks?.thumbnail || '',
+              genre: gBook.volumeInfo.categories?.join(', ') || 'Unknown',
+              available: true, // Assume available for Google Books
+              pageCount: gBook.volumeInfo.pageCount,
+              publishedDate: gBook.volumeInfo.publishedDate,
+              publisher: gBook.volumeInfo.publisher,
+              infoLink: gBook.volumeInfo.infoLink,
+            });
+            setIsGoogleSource(true);
+          } else {
+            setError('Book not found.');
+          }
+        } catch (gErr) {
+          setError('Failed to load book details from Google Books.');
         }
       } finally {
         setLoading(false);
       }
     };
     fetchBook();
-  }, [id]);
+  }, [id, location.search]);
 
   useEffect(() => {
     const fetchRelated = async () => {
       if (!book || !book.genre) return;
       try {
-        const res = await axios.get(`/api/books?genre=${encodeURIComponent(book.genre)}`);
+        const res = await api.get(`/books?genre=${encodeURIComponent(book.genre)}`);
         // Exclude current book from related
         setRelatedBooks(res.data.books.filter(b => b.id !== Number(id)));
       } catch (err) {
@@ -87,7 +126,7 @@ const BookDetail = () => {
   useEffect(() => {
     const fetchRatings = async () => {
       try {
-        const res = await axios.get(`/api/books/${id}/ratings`);
+        const res = await api.get(`/books/${id}/ratings`);
         setAvgRating(res.data.average);
         // If logged in, get user's rating
         if (isLoggedIn) {
@@ -110,7 +149,7 @@ const BookDetail = () => {
     const fetchReviews = async () => {
       try {
         // For now, we'll use a placeholder since the reviews API might not be fully implemented
-        // const res = await axios.get(`/api/books/${id}/reviews`);
+        // const res = await api.get(`/books/${id}/reviews`);
         // setReviews(res.data.reviews || []);
         setReviews([]); // Empty for now
       } catch (err) {
@@ -121,60 +160,166 @@ const BookDetail = () => {
     fetchReviews();
   }, [id]);
 
-  // Fetch if the current user has borrowed this book and not returned it
+  // Fetch all local books for matching
   useEffect(() => {
-    const fetchUserBorrowing = async () => {
-      if (!isLoggedIn || !book) return;
+    if (!isGoogleSource || !isLoggedIn) return;
+    const fetchAllBooks = async () => {
       try {
-        const res = await axios.get('/api/borrowings/history');
-        const borrow = (res.data.borrowings || []).find(b => b.bookId === Number(id) && b.status === 'borrowed');
-        setUserBorrowing(borrow);
-        
-        // If user has borrowed this book, fetch progress
+        const res = await api.get('/books');
+        setAllBooks(res.data.books || []);
+      } catch (err) {
+        setAllBooks([]);
+      }
+    };
+    fetchAllBooks();
+  }, [isGoogleSource, isLoggedIn]);
+
+  // Check if this Google Book is imported and borrowed
+  useEffect(() => {
+    if (!isGoogleSource || !isLoggedIn || !book || allBooks.length === 0) return;
+    // Find local book by title+author
+    const localBook = allBooks.find(b => b.title === book.title && b.author === book.author);
+    if (!localBook) {
+      setUserBorrowing(null);
+      return;
+    }
+    // Check if user has borrowed this book
+    const fetchBorrowing = async () => {
+      try {
+        const res = await api.get('/borrowings/history');
+        const borrow = (res.data.borrowings || []).find(bw => bw.bookId === localBook.id && bw.status === 'borrowed');
+        setUserBorrowing(borrow || null);
         if (borrow) {
+          // Fetch progress
           try {
-            const progressRes = await axios.get(`/api/progress/${borrow.id}`);
+            const progressRes = await api.get(`/progress/${borrow.id}`);
             setCurrentProgress(progressRes.data.progress.progress || 0);
-          } catch (progressErr) {
-            // No progress record exists yet, start at 0
+          } catch {
             setCurrentProgress(0);
           }
         }
-      } catch (err) {
+      } catch {
         setUserBorrowing(null);
         setCurrentProgress(0);
       }
     };
-    fetchUserBorrowing();
-  }, [isLoggedIn, book, id]);
+    fetchBorrowing();
+  }, [isGoogleSource, isLoggedIn, book, allBooks]);
 
-  const handleBorrow = async () => {
-    if (!book.available) {
-      toast.error('This book is not available for borrowing.');
+  // Borrow handler for Google Books
+  const handleBorrowGoogleBook = async () => {
+    if (!isLoggedIn) {
+      toast.error('Please log in to borrow books.');
+      navigate('/login');
       return;
     }
-
-    console.log('Starting borrow process for book:', book.id);
     setBorrowing(true);
     try {
-      const token = localStorage.getItem('token');
-      const borrowResponse = await axios.post('/api/borrowings', { bookId: book.id }, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      // Import to local DB
+      const res = await api.post('/books/import-google', {
+        googleId: book.id,
+        title: book.title,
+        author: book.author,
+        genre: book.genre,
+        description: book.description,
+        image: book.image
       });
-      console.log('Borrow response:', borrowResponse.data);
-      toast.success('Book borrowed successfully!');
-      
-      // Refresh book data to update availability
-      console.log('Refreshing book data...');
-      const res = await axios.get(`/api/books/${id}`);
-      console.log('Updated book data:', res.data);
-      setBook(res.data.book);
+      const localBook = res.data.book;
+      // Borrow as usual
+      await api.post('/borrowings', { bookId: localBook.id });
+      toast.success('Book imported and borrowed!');
+      // Refresh local books and borrowing state
+      const booksRes = await api.get('/books');
+      setAllBooks(booksRes.data.books || []);
     } catch (err) {
-      console.error('Error borrowing book:', err);
-      toast.error(err.response?.data?.message || 'Failed to borrow book.');
+      toast.error('Failed to borrow Google Book.');
+    } finally {
+      setBorrowing(false);
+    }
+  };
+
+  // Return handler for Google Books
+  const handleReturnGoogleBook = async () => {
+    if (!userBorrowing) return;
+    setBorrowing(true);
+    try {
+      await api.put(`/borrowings/book/${userBorrowing.bookId}/return`);
+      toast.success('Book returned!');
+      setUserBorrowing(null);
+      setCurrentProgress(0);
+    } catch (err) {
+      toast.error('Failed to return book.');
+    } finally {
+      setBorrowing(false);
+    }
+  };
+
+  // Update progress handler for Google Books
+  const handleProgressUpdateGoogleBook = async () => {
+    if (!userBorrowing || newProgress < 0 || newProgress > 100) {
+      toast.error('Invalid progress value. Must be between 0 and 100.');
+      return;
+    }
+    setProgressLoading(true);
+    try {
+      await api.post('/progress', {
+        borrowingId: userBorrowing.id,
+        progress: newProgress
+      });
+      setCurrentProgress(newProgress);
+      setShowProgressForm(false);
+      toast.success(`Progress updated to ${newProgress}%!`);
+    } catch (err) {
+      toast.error('Failed to update progress.');
+    } finally {
+      setProgressLoading(false);
+    }
+  };
+
+  const handleBorrow = async () => {
+    if (!isLoggedIn) {
+      toast.error('Please log in to borrow books.');
+      navigate('/login');
+      return;
+    }
+    setBorrowing(true);
+    try {
+      if (isGoogleSource) {
+        // For Google Books, create a local record first
+        try {
+          const createResponse = await api.post('/books/google', {
+            googleBookId: book.id,
+            title: book.title,
+            author: book.author,
+            description: book.description,
+            image: book.image,
+            genre: book.genre,
+            pageCount: book.pageCount,
+            publishedDate: book.publishedDate,
+            publisher: book.publisher,
+            isbn: book.isbn
+          });
+          // Now borrow the newly created local book
+          await api.post('/borrowings', {
+            bookId: createResponse.data.book.id
+          });
+          toast.success('Book added to library and borrowed successfully!');
+          navigate(`/dashboard`);
+        } catch (err) {
+          toast.error('Failed to import and borrow Google Book. Please try again.');
+        }
+      } else {
+        if (!book.available) {
+          toast.error('This book is not available for borrowing.');
+          return;
+        }
+        await api.post('/borrowings', {
+          bookId: book.id
+        });
+        toast.success('Book borrowed successfully!');
+        const res = await api.get(`/books/${id}`);
+        setBook(res.data.book);
+      }
     } finally {
       setBorrowing(false);
     }
@@ -184,13 +329,13 @@ const BookDetail = () => {
     console.log('Starting return process for book:', book.id);
     setBorrowing(true);
     try {
-      const returnResponse = await axios.put(`/api/borrowings/book/${book.id}/return`);
+      const returnResponse = await api.put(`/borrowings/book/${book.id}/return`);
       console.log('Return response:', returnResponse.data);
       toast.success('Book returned successfully!');
       
       // Refresh book data to update availability
       console.log('Refreshing book data...');
-      const res = await axios.get(`/api/books/${id}`);
+      const res = await api.get(`/books/${id}`);
       console.log('Updated book data:', res.data);
       setBook(res.data.book);
     } catch (err) {
@@ -205,11 +350,11 @@ const BookDetail = () => {
   const handleRate = async (rating) => {
     setRatingLoading(true);
     try {
-      await axios.post(`/api/books/${id}/rate`, { rating });
+      await api.post(`/books/${id}/rate`, { rating });
       setUserRating(rating);
       toast.success('Your rating has been submitted!');
       // Refresh average rating
-      const res = await axios.get(`/api/books/${id}/ratings`);
+      const res = await api.get(`/books/${id}/ratings`);
       setAvgRating(res.data.average);
     } catch (err) {
       toast.error('Failed to submit rating.');
@@ -227,7 +372,7 @@ const BookDetail = () => {
 
     setProgressLoading(true);
     try {
-      await axios.post('/api/progress', {
+      await api.post('/progress', {
         borrowingId: userBorrowing.id,
         progress: newProgress
       });
@@ -253,7 +398,7 @@ const BookDetail = () => {
       // For now, we'll just show a success message since the review API might not be fully implemented
       toast.success(`Rating of ${userRating} stars submitted successfully!`);
       // In a full implementation, you would post to a reviews API endpoint
-      // await axios.post(`/api/books/${id}/reviews`, { rating: userRating }, { withCredentials: true });
+      // await api.post(`/books/${id}/reviews`, { rating: userRating }, { withCredentials: true });
     } catch (err) {
       toast.error('Failed to submit rating.');
     }
@@ -268,7 +413,7 @@ const BookDetail = () => {
       // For now, we'll just show a success message since the review API might not be fully implemented
       toast.success(`Rating of ${rating} stars submitted successfully!`);
       // In a full implementation, you would post to a reviews API endpoint
-      // await axios.post(`/api/books/${id}/reviews`, { rating }, { withCredentials: true });
+      // await api.post(`/books/${id}/reviews`, { rating }, { withCredentials: true });
     } catch (err) {
       toast.error('Failed to submit rating.');
       setRatingSubmitted(false);
@@ -286,6 +431,124 @@ const BookDetail = () => {
         <div className="relative">
           <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-4 border-blue-200 border-t-blue-600"></div>
           <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-400 animate-ping"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // For Google Books, always show summary, never error
+  if (isGoogleSource && book) {
+    return (
+      <div className="min-h-screen bg-gradient-light dark:bg-gradient-dark pb-20 animate-fade-in">
+        <div className="max-w-4xl mx-auto px-4 pt-20 flex flex-col md:flex-row gap-8">
+          {/* Book Card */}
+          <div className="flex-shrink-0 flex flex-col items-center gap-6">
+            <div className="card p-6 w-72 h-96 flex items-center justify-center group hover-scale">
+              {book.image ? (
+                <img src={book.image} alt={book.title} className="w-full h-full object-cover rounded-xl shadow-soft" />
+              ) : (
+                <div className="w-full h-full bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center">
+                  <span className="text-gray-400 text-lg">No Cover</span>
+                </div>
+              )}
+            </div>
+            {/* Borrow/Return/Progress Buttons */}
+            {isLoggedIn && (
+              <div className="w-full mt-6 flex flex-col gap-3">
+                {!userBorrowing ? (
+                  <button
+                    className="btn-primary py-3 rounded-xl font-bold shadow-glow hover-lift transition-all duration-200"
+                    onClick={handleBorrowGoogleBook}
+                    disabled={borrowing}
+                  >
+                    {borrowing ? 'Borrowing...' : 'Borrow'}
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      className="btn-success py-3 rounded-xl font-bold shadow-glow hover-lift transition-all duration-200"
+                      onClick={handleReturnGoogleBook}
+                      disabled={borrowing}
+                    >
+                      {borrowing ? 'Returning...' : 'Return'}
+                    </button>
+                    <div className="card p-4 mt-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Reading Progress</span>
+                        <span className="text-sm font-bold text-gradient-secondary">{currentProgress}%</span>
+                      </div>
+                      <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner mb-2">
+                        <div
+                          className="h-full bg-gradient-secondary transition-all duration-500 shadow-soft"
+                          style={{ width: `${currentProgress}%` }}
+                        ></div>
+                      </div>
+                      {showProgressForm ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={newProgress}
+                              onChange={e => setNewProgress(parseInt(e.target.value))}
+                              className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                            <span className="text-sm font-bold text-gradient-secondary min-w-[3rem]">{newProgress}%</span>
+                          </div>
+                          <div className="flex gap-3">
+                            <button
+                              onClick={handleProgressUpdateGoogleBook}
+                              disabled={progressLoading}
+                              className="flex-1 btn-accent py-2 rounded-xl text-sm font-semibold"
+                            >
+                              {progressLoading ? 'Updating...' : 'Update Progress'}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowProgressForm(false);
+                                setNewProgress(currentProgress);
+                              }}
+                              className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setShowProgressForm(true);
+                            setNewProgress(currentProgress);
+                          }}
+                          className="w-full btn-accent py-2 rounded-xl text-sm font-semibold mt-2"
+                        >
+                          📊 Update Progress
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+          {/* Book Details */}
+          <div className="flex-1 flex flex-col gap-4">
+            <h1 className="heading-1 text-gradient-primary mb-2">{book.title}</h1>
+            <div className="flex items-center gap-4 mb-3">
+              <span className="text-lg text-gray-700 dark:text-gray-300">by <span className="font-semibold text-gray-900 dark:text-white">{book.author}</span></span>
+              <span className="inline-block px-3 py-1 text-xs bg-gradient-primary text-white rounded-full font-medium shadow-soft">{book.genre}</span>
+            </div>
+            <div className="body-text text-lg leading-relaxed mb-4">
+              {book.description || 'No description available.'}
+            </div>
+            <div className="flex flex-col gap-2 text-sm text-gray-600 dark:text-gray-300">
+              {book.pageCount && <div><b>Pages:</b> {book.pageCount}</div>}
+              {book.publishedDate && <div><b>Published:</b> {book.publishedDate}</div>}
+              {book.publisher && <div><b>Publisher:</b> {book.publisher}</div>}
+              {book.infoLink && <div><a href={book.infoLink} target="_blank" rel="noopener noreferrer" className="text-primary underline">View on Google Books</a></div>}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -598,6 +861,84 @@ const BookDetail = () => {
           </div>
         </div>
       </div>
+      {book && isGoogleSource && (
+        <div className="mb-4 p-2 bg-blue-100 text-blue-800 rounded text-sm font-semibold">
+          Imported from Google Books
+        </div>
+      )}
+      {/* Borrow/Return Section */}
+      {isLoggedIn && (
+        <div className="flex gap-4 mt-4">
+          {userBorrowing ? (
+            <button
+              className="btn-secondary"
+              onClick={handleReturn}
+              disabled={borrowing}
+            >
+              {borrowing ? 'Returning...' : 'Return Book'}
+            </button>
+          ) : (
+            <button
+              className="btn-primary"
+              onClick={handleBorrow}
+              disabled={borrowing || !book.available}
+            >
+              {borrowing ? 'Borrowing...' : isGoogleSource ? 'Import & Borrow' : 'Borrow Book'}
+            </button>
+          )}
+        </div>
+      )}
+      {/* Ratings Section */}
+      <div className="mt-6">
+        <h3 className="font-bold text-lg mb-2">Ratings</h3>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-yellow-500 text-xl">★</span>
+          <span className="font-semibold">{avgRating !== null ? avgRating.toFixed(1) : 'N/A'}</span>
+          <span className="text-gray-500 text-sm">({book && book.ratingCount ? book.ratingCount : 0} ratings)</span>
+        </div>
+        {isLoggedIn && (
+          <div className="flex items-center gap-2">
+            <span>Your Rating:</span>
+            {[1,2,3,4,5].map(star => (
+              <button
+                key={star}
+                className={star <= (userRating || 0) ? 'text-yellow-500' : 'text-gray-400'}
+                onClick={() => handleRate(star)}
+                disabled={ratingLoading}
+              >
+                ★
+              </button>
+            ))}
+            {ratingLoading && <span className="ml-2 text-xs text-gray-500">Saving...</span>}
+          </div>
+        )}
+      </div>
+      {/* Related Books Section */}
+      <div className="mt-8">
+        <h3 className="font-bold text-lg mb-2">Related Books</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {relatedBooks.length === 0 ? (
+            <span className="text-gray-500">No related books found.</span>
+          ) : (
+            relatedBooks.map(rb => (
+              <div key={rb.id} className="p-2 border rounded hover:shadow">
+                <img src={rb.image || rb.coverImage} alt={rb.title} className="w-full h-32 object-cover rounded mb-2" />
+                <div className="font-semibold text-sm mb-1">{rb.title}</div>
+                <div className="text-xs text-gray-500 mb-1">by {rb.author}</div>
+                <button
+                  className="btn-link text-blue-600 text-xs"
+                  onClick={() => navigate(`/books/${rb.id}`)}
+                >
+                  View Details
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+      {error && (
+        <div className="p-4 bg-red-100 text-red-700 rounded mb-4">{error}</div>
+      )}
     </div>
   );
 };

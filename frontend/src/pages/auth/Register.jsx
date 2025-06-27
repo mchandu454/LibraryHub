@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import api from '../../api';
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from 'react-toastify';
 
@@ -36,7 +36,7 @@ const Register = () => {
     try {
       console.log('Attempting to register with:', { name: formData.name, email: formData.email });
       
-      const registerResponse = await axios.post("/api/auth/register", {
+      const registerResponse = await api.post("/auth/register", {
         name: formData.name,
         email: formData.email,
         password: formData.password
