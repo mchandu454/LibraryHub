@@ -6,6 +6,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Navbar from "./components/Navbar";
 import Landing from "./pages/Landing";
+import NotFoundPage from './pages/NotFoundPage';
 
 // Layouts
 import UserSidebar from "./components/UserSidebar";
@@ -259,7 +260,6 @@ function App() {
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
-                    {/* ❌ Fallback */}
                     <Route path="*" element={<NotFoundPage />} />
                   </Routes>
             </Suspense>

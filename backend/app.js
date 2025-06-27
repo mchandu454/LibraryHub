@@ -16,9 +16,8 @@ const app = express();
 const allowedOrigins = [
   'https://library-hub-five.vercel.app',
   'https://library-hub-git-main-mchandu454s-projects.vercel.app',
-  'https://library-clj3k83gp-mchandu454s-projects.vercel.app',
   'http://localhost:5173',
-  'http://localhost:3000',
+  'http://localhost:3000'
 ];
 
 const corsOptions = {
