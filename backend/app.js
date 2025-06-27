@@ -20,10 +20,7 @@ app.use(cors({
     const allowedOrigins = [
       'http://localhost:5173',
       'http://localhost:3000',
-      'https://library-hub-five.vercel.app',
-      'https://libraryhub.vercel.app',
-      'https://libraryhub-git-main-yourusername.vercel.app',
-      'https://library-4vcmpzwv2-mchandu454s-projects.vercel.app'
+      'https://library-ghqoqfueq-mchandu454s-projects.vercel.app'
     ];
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
