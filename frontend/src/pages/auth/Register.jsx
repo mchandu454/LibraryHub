@@ -40,9 +40,12 @@ const Register = () => {
         name: formData.name,
         email: formData.email,
         password: formData.password
-      }, { withCredentials: true });
+      });
       
       console.log('Registration successful:', registerResponse.data);
+      
+      localStorage.setItem('token', registerResponse.data.token);
+      localStorage.setItem('user', JSON.stringify(registerResponse.data.user));
       
       toast.success("Registration successful! Please login to continue.");
       navigate("/login", { state: { email: formData.email } });

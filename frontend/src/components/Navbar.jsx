@@ -54,7 +54,7 @@ const Navbar = ({ isAuthenticated, onLogout, darkMode, toggleDarkMode, user, aut
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
         {/* Navigation links */}
-        {isAuthenticated && navLinks.map(link => (
+        {isLoggedIn && navLinks.map(link => (
           <Link
             to={link.to}
             key={link.to}
@@ -91,7 +91,7 @@ const Navbar = ({ isAuthenticated, onLogout, darkMode, toggleDarkMode, user, aut
               <div className="flex items-center justify-center w-24 h-10">
                 <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-200 border-t-primary-600"></div>
           </div>
-        ) : isAuthenticated ? (
+        ) : isLoggedIn ? (
               <div className="flex items-center gap-4">
                 {/* User profile */}
                 <div className="relative" ref={profileRef}>
@@ -147,7 +147,7 @@ const Navbar = ({ isAuthenticated, onLogout, darkMode, toggleDarkMode, user, aut
         {menuOpen && (
           <div className="md:hidden py-4 border-t border-gray-200 dark:border-gray-700 animate-slide-up">
             <div className="space-y-2">
-              {isAuthenticated && navLinks.map(link => (
+              {isLoggedIn && navLinks.map(link => (
                 <Link
                   key={link.to}
                   to={link.to}
@@ -163,7 +163,7 @@ const Navbar = ({ isAuthenticated, onLogout, darkMode, toggleDarkMode, user, aut
                 </Link>
               ))}
               
-              {!authLoading && !isAuthenticated && (
+              {!authLoading && !isLoggedIn && (
                 <button 
                   className="w-full btn-primary"
                   onClick={() => { navigate('/login'); setMenuOpen(false); }}
@@ -172,7 +172,7 @@ const Navbar = ({ isAuthenticated, onLogout, darkMode, toggleDarkMode, user, aut
                 </button>
               )}
               
-              {!authLoading && isAuthenticated && (
+              {!authLoading && isLoggedIn && (
                 <button 
                   className="w-full btn-danger"
                   onClick={() => { onLogout(); setMenuOpen(false); }}

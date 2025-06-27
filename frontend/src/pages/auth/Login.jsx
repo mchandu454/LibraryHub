@@ -16,10 +16,10 @@ const Login = () => {
     setError("");
     setLoading(true);
     try {
-      const res = await axios.post("/api/auth/login", { email, password }, { withCredentials: true });
+      const res = await axios.post("/api/auth/login", { email, password });
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
-      console.log(res.data.token);
+      console.log(res.data);
       window.dispatchEvent(new Event('storage'));
       toast.success("Login successful!");
       navigate("/home");

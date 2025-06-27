@@ -126,14 +126,14 @@ const BookDetail = () => {
     const fetchUserBorrowing = async () => {
       if (!isLoggedIn || !book) return;
       try {
-        const res = await axios.get('/api/borrowings/history', { withCredentials: true });
+        const res = await axios.get('/api/borrowings/history');
         const borrow = (res.data.borrowings || []).find(b => b.bookId === Number(id) && b.status === 'borrowed');
         setUserBorrowing(borrow);
         
         // If user has borrowed this book, fetch progress
         if (borrow) {
           try {
-            const progressRes = await axios.get(`/api/progress/${borrow.id}`, { withCredentials: true });
+            const progressRes = await axios.get(`/api/progress/${borrow.id}`);
             setCurrentProgress(progressRes.data.progress.progress || 0);
           } catch (progressErr) {
             // No progress record exists yet, start at 0
@@ -157,7 +157,13 @@ const BookDetail = () => {
     console.log('Starting borrow process for book:', book.id);
     setBorrowing(true);
     try {
-      const borrowResponse = await axios.post('/api/borrowings', { bookId: book.id }, { withCredentials: true });
+      const token = localStorage.getItem('token');
+      const borrowResponse = await axios.post('/api/borrowings', { bookId: book.id }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       console.log('Borrow response:', borrowResponse.data);
       toast.success('Book borrowed successfully!');
       
@@ -178,7 +184,7 @@ const BookDetail = () => {
     console.log('Starting return process for book:', book.id);
     setBorrowing(true);
     try {
-      const returnResponse = await axios.put(`/api/borrowings/book/${book.id}/return`, {}, { withCredentials: true });
+      const returnResponse = await axios.put(`/api/borrowings/book/${book.id}/return`);
       console.log('Return response:', returnResponse.data);
       toast.success('Book returned successfully!');
       
@@ -199,7 +205,7 @@ const BookDetail = () => {
   const handleRate = async (rating) => {
     setRatingLoading(true);
     try {
-      await axios.post(`/api/books/${id}/rate`, { rating }, { withCredentials: true });
+      await axios.post(`/api/books/${id}/rate`, { rating });
       setUserRating(rating);
       toast.success('Your rating has been submitted!');
       // Refresh average rating
@@ -224,7 +230,7 @@ const BookDetail = () => {
       await axios.post('/api/progress', {
         borrowingId: userBorrowing.id,
         progress: newProgress
-      }, { withCredentials: true });
+      });
       
       setCurrentProgress(newProgress);
       setShowProgressForm(false);

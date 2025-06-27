@@ -29,8 +29,8 @@ function Dashboard() {
       setUserLoading(true);
       try {
         const [userRes, borrowingsRes] = await Promise.all([
-          axios.get('/api/members/me', { withCredentials: true }),
-          axios.get('/api/borrowings/history', { withCredentials: true })
+          axios.get('/api/members/me'),
+          axios.get('/api/borrowings/history')
         ]);
         
         setUser(userRes.data.user);
@@ -60,10 +60,10 @@ function Dashboard() {
   const handleReturn = async (borrowingId) => {
     setReturning(prev => ({ ...prev, [borrowingId]: true }));
     try {
-      await axios.put(`/api/borrowings/${borrowingId}/return`, {}, { withCredentials: true });
+      await axios.put(`/api/borrowings/${borrowingId}/return`, {});
       toast.success('Book returned successfully!');
       // Refresh borrowings
-      const res = await axios.get('/api/borrowings/history', { withCredentials: true });
+      const res = await axios.get('/api/borrowings/history');
       setBorrowings(res.data.borrowings || []);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to return book.');
@@ -84,7 +84,7 @@ function Dashboard() {
       await axios.post('/api/progress', {
         borrowingId,
         progress: newProgress
-      }, { withCredentials: true });
+      });
       
       // Update local state
       setBorrowings(prev => prev.map(b => 

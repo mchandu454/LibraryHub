@@ -116,14 +116,13 @@ function App() {
       setAuthLoading(true);
       if (isAuthenticated) {
         try {
-          const res = await axios.get('/api/members/me', { withCredentials: true });
+          const res = await axios.get('/api/members/me');
           setUser(res.data.user);
           localStorage.setItem('token', res.data.token);
           window.dispatchEvent(new Event('storage'));
         } catch (err) {
           setUser(null);
           setIsAuthenticated(false);
-          localStorage.removeItem('token');
         }
       } else {
         setUser(null);
@@ -139,7 +138,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await axios.post("/api/auth/logout", {}, { withCredentials: true });
+      await axios.post("/api/auth/logout");
       setUser(null);
       setIsAuthenticated(false);
       localStorage.removeItem('token');
@@ -187,8 +186,11 @@ function App() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
+    setIsAuthenticated(!!token);
     if (token) {
-      // Set user as logged in in your app state (e.g., Redux, Context, or useState)
+      // Optionally, set user from localStorage
+      const user = localStorage.getItem('user');
+      if (user) setUser(JSON.parse(user));
     }
   }, []);
 
