@@ -185,6 +185,13 @@ function App() {
     return config;
   });
 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      // Set user as logged in in your app state (e.g., Redux, Context, or useState)
+    }
+  }, []);
+
   return (
     <ErrorBoundary>
       <DarkModeContext.Provider value={{ darkMode, toggleDarkMode }}>
