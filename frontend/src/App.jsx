@@ -140,8 +140,8 @@ function App() {
           const res = await api.get('/members/me');
           setUser(res.data.user);
           if (res.data.token && res.data.token !== 'undefined' && res.data.token !== null) {
-            localStorage.setItem('token', res.data.token);
-            api.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+          localStorage.setItem('token', res.data.token);
+          api.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
           }
           window.dispatchEvent(new Event('storage'));
         } catch (err) {

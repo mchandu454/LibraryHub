@@ -45,7 +45,7 @@ const Register = () => {
       console.log('Registration successful:', registerResponse.data);
       
       if (registerResponse.data.token && registerResponse.data.token !== 'undefined' && registerResponse.data.token !== null) {
-        localStorage.setItem('token', registerResponse.data.token);
+      localStorage.setItem('token', registerResponse.data.token);
         api.defaults.headers.common['Authorization'] = `Bearer ${registerResponse.data.token}`;
       }
       localStorage.setItem('user', JSON.stringify(registerResponse.data.user));

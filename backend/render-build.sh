@@ -1,3 +1,7 @@
 #!/usr/bin/env bash
-npx sequelize-cli db:migrate
+
+# Run migration using npx with explicit path
+./node_modules/.bin/sequelize-cli db:migrate
+
+# Start server
 npm start
