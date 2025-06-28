@@ -91,6 +91,24 @@ VITE_GOOGLE_BOOKS_API_KEY=your_google_books_api_key
 # Landing Page
 ![image](https://github.com/user-attachments/assets/f70e8cd0-7222-4ecc-a193-54788415db0b)
 
+#Register Page
+![image](https://github.com/user-attachments/assets/6272397b-b3f3-4f88-8669-f604ce35672e)
+
+#Login Page
+![image](https://github.com/user-attachments/assets/93f56c28-c0ba-42bf-abd9-038325f03592)
+
+#Home Page
+![image](https://github.com/user-attachments/assets/4943e145-5490-43d7-94bb-2bc5926bfddd)
+
+#Dashboard page
+![image](https://github.com/user-attachments/assets/864d7cb6-b520-4b6e-b0c2-2466abd888b8)
+
+#BookDetail page
+![image](https://github.com/user-attachments/assets/cda58e6f-5c49-43c9-bdc0-024ac7d34979)
+
+
+
+
 ---
 
 ## Troubleshooting
