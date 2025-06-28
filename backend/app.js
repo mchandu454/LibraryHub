@@ -18,6 +18,7 @@ const allowedOrigins = [
   'https://library-hub-git-main-mchandu454s-projects.vercel.app',
   'https://library-77wtpd9zv-mchandu454s-projects.vercel.app',
   'https://library-oiwiai0kh-mchandu454s-projects.vercel.app',
+  'https://library-gvgn2w04n-mchandu454s-projects.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000'
 ];
