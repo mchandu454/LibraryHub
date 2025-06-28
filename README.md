@@ -87,6 +87,10 @@ VITE_GOOGLE_BOOKS_API_KEY=your_google_books_api_key
 - **Database:**
   - For production, connect to your cloud PostgreSQL and ensure all required columns exist (see `backend/models/book.js`).
 
+## Screenshots
+# Landing Page
+![image](https://github.com/user-attachments/assets/f70e8cd0-7222-4ecc-a193-54788415db0b)
+
 ---
 
 ## Troubleshooting
