@@ -124,14 +124,14 @@ const BookDetail = () => {
 
   // Fetch ratings
   useEffect(() => {
+    // Only fetch ratings if we have a local DB book (not just a Google Book)
+    if (!book || isGoogleSource) return;
     const fetchRatings = async () => {
       try {
-        const res = await api.get(`/books/${id}/ratings`);
+        const res = await api.get(`/books/${book.id}/ratings`);
         setAvgRating(res.data.average);
-        // If logged in, get user's rating
         if (isLoggedIn) {
           const token = localStorage.getItem('token');
-          // Optionally, fetch user rating from ratings list
           const userId = JSON.parse(atob(token.split('.')[1])).id;
           const userR = (res.data.ratings || []).find(r => r.userId === userId);
           setUserRating(userR ? userR.rating : null);
@@ -142,7 +142,7 @@ const BookDetail = () => {
       }
     };
     fetchRatings();
-  }, [id, isLoggedIn]);
+  }, [book, isLoggedIn, isGoogleSource]);
 
   // Fetch reviews
   useEffect(() => {
